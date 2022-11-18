@@ -69,14 +69,15 @@ def class_variance(histogram, g_min, g_max):
 
 def main():
     img = Image.open('../test_images/tiger1.bmp')
-
     gray_values = [grayscale(rgb) for rgb in img.getdata()]
-
     histogram = normalized_histogram(gray_values)
 
-    # gray_values = np.uint8(np.reshape(gray_values, (img.height, img.width)))
-    # img2 = Image.fromarray(gray_values, mode='L')
-    # img2.show()
+    two_region_min_variance = np.inf
+    two_region_best_thresholds = []
+    three_region_min_variance = np.inf
+    three_region_best_thresholds = []
+    four_region_min_variance = np.inf
+    four_region_best_thresholds = []
 
     for t1 in range(0, 255):
         classA_var = class_variance(histogram, 0, t1)
@@ -84,23 +85,43 @@ def main():
         classB_var = class_variance(histogram, t1+1, 255)
         classB_prob = class_probability(histogram, t1+1, 255)
         total_var = classA_var * classA_prob + classB_var * classB_prob
+        if total_var < two_region_min_variance:
+            two_region_min_variance = total_var
+            two_region_best_thresholds = [t1]
 
-        print(f"Total:{total_var} | A:{classA_var:4.4f}, B:{classB_var:4.4f} 2 regions, [0, {t1}] [{t1+1}, 255]")
-        # for t2 in range(t1+1, 255):
-            # classA_mean = class_mean(histogram, 0, t1)
-            # classB_mean = class_mean(histogram, t1+1, t2)
-            # classC_mean = class_mean(histogram, t2+1, 255)
-            # print(f"[0, {t1}]:{classA_mean:4.4f}, [{t1+1}, {t2}]:{classB_mean:4.4f}, [{t2+1}, 255]:{classC_mean:4.4f}")
-        #     # classA_prob = class_probability(histogram, 0, t1)
-        #     classB_prob = class_probability(histogram, t1+1, t2)
-        #     # classC_prob = class_probability(histogram, t2+1, 255)
-        #     # print(f"{round(classA_prob+classB_prob+classC_prob, 2)}={classA_prob}+{classB_prob}+{classC_prob} 3 regions,  [0, {t1}] [{t1+1}, {t2}] [{t2+1}, 255]")
-        #     for t3 in range(t2+1, 255):
-        #         # classA_prob = class_probability(histogram, 0, t1)
-        #         # classB_prob = class_probability(histogram, t1+1, t2)
-        #         classC_prob = class_probability(histogram, t2+1, t3)
-        #         classD_prob = class_probability(histogram, t3+1, 255)
-        #         print(f"{round(classA_prob+classB_prob+classC_prob+classD_prob, 4)}={classA_prob}+{classB_prob}+{classC_prob}+{classD_prob} 4 regions,  [0, {t1}] [{t1+1}, {t2}] [{t2+1}, {t3}] [{t3+1}, 255]")
+        for t2 in range(t1+1, 255):
+            classB_var = class_variance(histogram, t1+1, t2)
+            classB_prob = class_probability(histogram, t1+1, t2)
+            classC_var = class_variance(histogram, t2+1, 255)
+            classC_prob = class_probability(histogram, t2+1, 255)
+            total_var = classA_var * classA_prob + classB_var * classB_prob + classC_var * classC_prob
+            if total_var < three_region_min_variance:
+                three_region_min_variance = total_var
+                three_region_best_thresholds = [t1, t2]
+    
+            for t3 in range(t2+1, 255):
+                classC_var = class_variance(histogram, t2+1, t3)
+                classC_prob = class_probability(histogram, t2+1, t3)
+                classD_var = class_variance(histogram, t3+1, 255)
+                classD_prob = class_probability(histogram, t3+1, 255)
+                total_var = classA_var * classA_prob + classB_var * classB_prob + classC_var * classC_prob + classD_var * classD_prob
+                if total_var < four_region_min_variance:
+                    four_region_min_variance = total_var
+                    four_region_best_thresholds = [t1, t2, t3]
+    
+    print(f"Two regions: {two_region_min_variance}, {two_region_best_thresholds}")
+    print(f"Three regions: {three_region_min_variance}, {three_region_best_thresholds}")
+    print(f"Four regions: {four_region_min_variance}, {four_region_best_thresholds}")
 
+    if two_region_min_variance <= three_region_min_variance and two_region_min_variance <= four_region_min_variance:
+        print(f"Two regions is best, with total weighted variance {two_region_min_variance} using thresholds {two_region_best_thresholds}")
+    elif three_region_min_variance <= four_region_min_variance:
+        print(f"Three regions is best, with total weighted variance {two_region_min_variance} using thresholds {three_region_best_thresholds}")
+    else:
+        print(f"Four regions is best, with total weighted variance {four_region_min_variance} using thresholds {four_region_best_thresholds}")
+
+    # gray_values = np.uint8(np.reshape(gray_values, (img.height, img.width)))
+    # img2 = Image.fromarray(gray_values, mode='L')
+    # img2.show()
 if __name__ == "__main__":
     main()
