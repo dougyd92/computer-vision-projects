@@ -2,6 +2,9 @@
 # drd8913@nyu.edu
 # N14928011
 
+import argparse
+import pathlib
+
 from PIL import Image
 import numpy as np
 
@@ -171,10 +174,16 @@ class OtsusSolver:
         return variance_by_num_regions, thresholds_by_num_regions
 
 def main():
-    img = Image.open('test_images/rock-stream1.bmp')
+    parser = argparse.ArgumentParser(
+                prog = 'otsu.py',
+                description = 'Takes a .bmp and outputs another .bmp with the image segmented into 2, 3, or 4 regions')
+    parser.add_argument('source_file', type=pathlib.Path, help='The source image to be segmented. Must be a bitmap (.bmp) file')
+    parser.add_argument('-d', '--dest', required=False, type=pathlib.Path, help='''The destination file path to save the segmented image. 
+        If omitted, the image will be previewed with Image.show()''')
+    args = parser.parse_args()
 
+    img = Image.open(args.source_file)
     otsus = OtsusSolver(img)
-
     variance_by_num_regions, thresholds_by_num_regions = otsus.get_best_thresholds()
 
     print(f"Two regions: {variance_by_num_regions[2]}, {thresholds_by_num_regions[2]}")
@@ -193,6 +202,11 @@ def main():
         print(f"Three regions is best, with total weighted variance {variance_by_num_regions[3]} using thresholds {thresholds_by_num_regions[3]}")
     else:
         print(f"Four regions is best, with total weighted variance {variance_by_num_regions[4]} using thresholds {thresholds_by_num_regions[4]}")
+
+    # if args.dest is not None:
+    #     img.save(args.dest)
+    # else:
+    #     img.show()
 
 if __name__ == "__main__":
     main()
