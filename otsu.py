@@ -5,10 +5,22 @@
 from PIL import Image
 import numpy as np
 
-def grayscale(r, g, b):
+def grayscale(rgb):
+    """
+        Converts a given tuple of (r,g,b) values into a single
+        grayscale intensity value using a weighted sum.
+    """
+    r = rgb[0]
+    g = rgb[1]
+    b = rgb[2]
     return round(0.299 * r + 0.587 * g + 0.114 * b)
 
 def normalized_histogram(gray_values):
+    """
+        Given a 1D list of gray values, returns a normalized histogram,
+        ie the proportion of pixels in the image corresponding to each
+        possible gray level value.
+    """
     histogram = {}
     for i in range(256):
         histogram[i] = 0
@@ -25,7 +37,7 @@ def normalized_histogram(gray_values):
 def main():
     img = Image.open('../test_images/tiger1.bmp')
 
-    gray_values = [grayscale(rgb[0], rgb[1], rgb[2]) for rgb in img.getdata()]
+    gray_values = [grayscale(rgb) for rgb in img.getdata()]
 
     histogram = normalized_histogram(gray_values)
 
