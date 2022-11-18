@@ -67,6 +67,30 @@ def class_variance(histogram, g_min, g_max):
         sum += histogram[i] * (i - mean)**2
     return sum / class_probability(histogram, g_min, g_max)
 
+def segment_image(img, thresholds):
+    gray_values = [grayscale(rgb) for rgb in img.getdata()]
+
+    pixels = np.zeros((len(gray_values), 3))
+    print(thresholds, len(thresholds))
+    for i in range(len(gray_values)):
+        if gray_values[i] <= thresholds[0]:
+            # background pixel, display as gray
+            pixels[i] = np.full((1,3),gray_values[i])
+        elif len(thresholds) < 2 or gray_values[i] <= thresholds[1]:
+            # foreground region A, display as red
+            pixels[i] = np.array([gray_values[i], 0, 0])
+        elif len(thresholds) < 3 or gray_values[i] <= thresholds[2]:
+            # foreground region B, display as blue
+            pixels[i] = np.array([0, 0, gray_values[i]])            
+        else:
+            # foreground region C, display as green
+            pixels[i] = np.array([0, gray_values[i], 0])
+
+    pixels = np.uint8(np.reshape(pixels, (img.height, img.width, 3)))
+    img2 = Image.fromarray(pixels, mode='RGB')
+
+    return img2
+
 def main():
     img = Image.open('../test_images/tiger1.bmp')
     gray_values = [grayscale(rgb) for rgb in img.getdata()]
@@ -120,8 +144,8 @@ def main():
     else:
         print(f"Four regions is best, with total weighted variance {four_region_min_variance} using thresholds {four_region_best_thresholds}")
 
-    # gray_values = np.uint8(np.reshape(gray_values, (img.height, img.width)))
-    # img2 = Image.fromarray(gray_values, mode='L')
-    # img2.show()
+    segmented = segment_image(img, four_region_best_thresholds)
+    segmented.show()
+
 if __name__ == "__main__":
     main()
