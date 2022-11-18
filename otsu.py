@@ -135,69 +135,64 @@ class OtsusSolver:
             self.class_vars[g_min][g_max] = variance # memoize
         return self.class_vars[g_min][g_max]
 
+    def get_weighted_total_variance(self, thresholds):
+        num_regions = len(thresholds) + 1
+        thresholds = [-1] + thresholds + [255] # implicit upper and lower limits
+
+        total_var = 0
+        for i in range(num_regions):
+            class_var = self.class_variance(thresholds[i] + 1, thresholds[i+1])
+            class_prob = self.class_probability(thresholds[i] + 1, thresholds[i+1])
+            total_var += class_var * class_prob
+        return total_var
+
     def get_best_thresholds(self):
-        two_region_min_variance = np.inf
-        two_region_best_thresholds = []
-        three_region_min_variance = np.inf
-        three_region_best_thresholds = []
-        four_region_min_variance = np.inf
-        four_region_best_thresholds = []
+        variance_by_num_regions = {2: np.inf, 3: np.inf, 4: np.inf}
+        thresholds_by_num_regions = {2: [], 3: [], 4: []}
 
         for t1 in range(0, 255):
-            classA_var = self.class_variance(0, t1)
-            classA_prob = self.class_probability(0, t1)
-            classB_var = self.class_variance(t1+1, 255)
-            classB_prob = self.class_probability(t1+1, 255)
-            total_var = classA_var * classA_prob + classB_var * classB_prob
-            if total_var < two_region_min_variance:
-                two_region_min_variance = total_var
-                two_region_best_thresholds = [t1]
+            total_var = self.get_weighted_total_variance([t1])
+            if total_var < variance_by_num_regions[2]:
+                variance_by_num_regions[2] = total_var
+                thresholds_by_num_regions[2] = [t1]
 
             for t2 in range(t1+1, 255):
-                classB_var = self.class_variance(t1+1, t2)
-                classB_prob = self.class_probability(t1+1, t2)
-                classC_var = self.class_variance(t2+1, 255)
-                classC_prob = self.class_probability(t2+1, 255)
-                total_var = classA_var * classA_prob + classB_var * classB_prob + classC_var * classC_prob
-                if total_var < three_region_min_variance:
-                    three_region_min_variance = total_var
-                    three_region_best_thresholds = [t1, t2]
+                total_var = self.get_weighted_total_variance([t1, t2])
+                if total_var < variance_by_num_regions[3]:
+                    variance_by_num_regions[3] = total_var
+                    thresholds_by_num_regions[3] = [t1, t2]
 
                 for t3 in range(t2+1, 255):
-                    classC_var = self.class_variance(t2+1, t3)
-                    classC_prob = self.class_probability(t2+1, t3)
-                    classD_var = self.class_variance(t3+1, 255)
-                    classD_prob = self.class_probability(t3+1, 255)
-                    total_var = classA_var * classA_prob + classB_var * classB_prob + classC_var * classC_prob + classD_var * classD_prob
-                    if total_var < four_region_min_variance:
-                        four_region_min_variance = total_var
-                        four_region_best_thresholds = [t1, t2, t3]
+                    total_var = self.get_weighted_total_variance([t1, t2, t3])
+                    if total_var < variance_by_num_regions[4]:
+                        variance_by_num_regions[4] = total_var
+                        thresholds_by_num_regions[4] = [t1, t2, t3]
 
-        print(f"Two regions: {two_region_min_variance}, {two_region_best_thresholds}")
-        segmented = get_segmented_image(self.img, two_region_best_thresholds)
-        segmented.show()
-        print(f"Three regions: {three_region_min_variance}, {three_region_best_thresholds}")
-        segmented = get_segmented_image(self.img, three_region_best_thresholds)
-        segmented.show()
-        print(f"Four regions: {four_region_min_variance}, {four_region_best_thresholds}")
-        segmented = get_segmented_image(self.img, four_region_best_thresholds)
-        segmented.show()
-
-        if two_region_min_variance <= three_region_min_variance and two_region_min_variance <= four_region_min_variance:
-            print(f"Two regions is best, with total weighted variance {two_region_min_variance} using thresholds {two_region_best_thresholds}")
-        elif three_region_min_variance <= four_region_min_variance:
-            print(f"Three regions is best, with total weighted variance {two_region_min_variance} using thresholds {three_region_best_thresholds}")
-        else:
-            print(f"Four regions is best, with total weighted variance {four_region_min_variance} using thresholds {four_region_best_thresholds}")
-
-        return 0
+        return variance_by_num_regions, thresholds_by_num_regions
 
 def main():
     img = Image.open('test_images/rock-stream1.bmp')
 
     otsus = OtsusSolver(img)
 
-    otsus.get_best_thresholds()
+    variance_by_num_regions, thresholds_by_num_regions = otsus.get_best_thresholds()
+
+    print(f"Two regions: {variance_by_num_regions[2]}, {thresholds_by_num_regions[2]}")
+    segmented = get_segmented_image(img, thresholds_by_num_regions[2])
+    segmented.show()
+    print(f"Three regions: {variance_by_num_regions[3]}, {thresholds_by_num_regions[3]}")
+    segmented = get_segmented_image(img, thresholds_by_num_regions[3])
+    segmented.show()
+    print(f"Four regions: {variance_by_num_regions[4]}, {thresholds_by_num_regions[4]}")
+    segmented = get_segmented_image(img, thresholds_by_num_regions[4])
+    segmented.show()
+
+    if variance_by_num_regions[2] <= variance_by_num_regions[3] and variance_by_num_regions[2] <= variance_by_num_regions[4]:
+        print(f"Two regions is best, with total weighted variance {variance_by_num_regions[2]} using thresholds {thresholds_by_num_regions[2]}")
+    elif variance_by_num_regions[3] <= variance_by_num_regions[4]:
+        print(f"Three regions is best, with total weighted variance {variance_by_num_regions[3]} using thresholds {thresholds_by_num_regions[3]}")
+    else:
+        print(f"Four regions is best, with total weighted variance {variance_by_num_regions[4]} using thresholds {thresholds_by_num_regions[4]}")
 
 if __name__ == "__main__":
     main()
