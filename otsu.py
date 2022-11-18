@@ -34,24 +34,47 @@ def normalized_histogram(gray_values):
     
     return histogram
 
-def segment_image(img, thresholds):
-    gray_values = [grayscale(rgb) for rgb in img.getdata()]
+def remap(value, min, max):
+    """
+    Remap values in between two thresholds into the full
+    [0, 255] range. This helper is just to make the output
+    image easier to look at; it does not affect the actual
+    segmentation process.
+    """
+    return 255 * (value - min ) / (max - min)
 
+def get_segmented_image(img, thresholds):
+    """
+    Given an Image and an array of thresholds,
+    returns a new Image where the regions corresponding
+    to the different thresholds are displayed as different
+    colors.
+    Background: Gray
+    Foreground region A: Red
+    Foreground region B (if applicable): Blue
+    Foreground region C (if applicable): Green
+    """
+    thresholds.append(255)
+    
+    gray_values = [grayscale(rgb) for rgb in img.getdata()]
     pixels = np.zeros((len(gray_values), 3))
-    print(thresholds, len(thresholds))
+
     for i in range(len(gray_values)):
         if gray_values[i] <= thresholds[0]:
-            # background pixel, display as gray
+            # background pixel, display as grays
             pixels[i] = np.full((1,3),gray_values[i])
-        elif len(thresholds) < 2 or gray_values[i] <= thresholds[1]:
+        elif gray_values[i] <= thresholds[1]:
             # foreground region A, display as red
-            pixels[i] = np.array([gray_values[i], 0, 0])
-        elif len(thresholds) < 3 or gray_values[i] <= thresholds[2]:
+            value = remap(gray_values[i], thresholds[0]+1, thresholds[1])
+            pixels[i] = np.array([value, 0, 0])
+        elif gray_values[i] <= thresholds[2]:
             # foreground region B, display as blue
-            pixels[i] = np.array([0, 0, gray_values[i]])            
+            value = remap(gray_values[i], thresholds[1]+1, thresholds[2])
+            pixels[i] = np.array([0, 0, value])
         else:
             # foreground region C, display as green
-            pixels[i] = np.array([0, gray_values[i], 0])
+            value = remap(gray_values[i], thresholds[2]+1, 255)
+            pixels[i] = np.array([0, value, 0])
 
     pixels = np.uint8(np.reshape(pixels, (img.height, img.width, 3)))
     img2 = Image.fromarray(pixels, mode='RGB')
@@ -151,13 +174,13 @@ class OtsusSolver:
                         four_region_best_thresholds = [t1, t2, t3]
 
         print(f"Two regions: {two_region_min_variance}, {two_region_best_thresholds}")
-        segmented = segment_image(self.img, two_region_best_thresholds)
+        segmented = get_segmented_image(self.img, two_region_best_thresholds)
         segmented.show()
         print(f"Three regions: {three_region_min_variance}, {three_region_best_thresholds}")
-        segmented = segment_image(self.img, three_region_best_thresholds)
+        segmented = get_segmented_image(self.img, three_region_best_thresholds)
         segmented.show()
         print(f"Four regions: {four_region_min_variance}, {four_region_best_thresholds}")
-        segmented = segment_image(self.img, four_region_best_thresholds)
+        segmented = get_segmented_image(self.img, four_region_best_thresholds)
         segmented.show()
 
         if two_region_min_variance <= three_region_min_variance and two_region_min_variance <= four_region_min_variance:
@@ -170,7 +193,7 @@ class OtsusSolver:
         return 0
 
 def main():
-    img = Image.open('test_images/tiger1.bmp')
+    img = Image.open('test_images/rock-stream1.bmp')
 
     otsus = OtsusSolver(img)
 
