@@ -126,7 +126,10 @@ class OtsusSolver:
                 sum += i * self.histogram[i]
             # mean = sum / self.class_probability(g_min, g_max)
             prob = self.class_probability(g_min, g_max)
-            mean = sum / prob
+            if prob == 0:
+                mean = 0
+            else:
+                mean = sum / prob
             self.class_means[g_min][g_max] = mean # memoize
         return self.class_means[g_min][g_max]
 
@@ -140,7 +143,11 @@ class OtsusSolver:
             mean = self.class_mean(g_min, g_max)
             for i in range(g_min, g_max+1):
                 sum += self.histogram[i] * (i - mean)**2
-            variance = sum / self.class_probability(g_min, g_max)
+            prob = self.class_probability(g_min, g_max)
+            if prob == 0:
+                variance = 0
+            else:
+                variance = sum / self.class_probability(g_min, g_max)
             self.class_vars[g_min][g_max] = variance # memoize
         return self.class_vars[g_min][g_max]
 
@@ -208,19 +215,24 @@ def main():
     variance_by_num_regions, thresholds_by_num_regions = otsus.get_best_thresholds()
 
     for i in range(2, 5):
-        print(f"{i} regions: best threshold(s)={thresholds_by_num_regions[i]}, with total weighted variance {variance_by_num_regions[i]}")
+        print(f"{i} regions: best threshold={thresholds_by_num_regions[i]}, with total weighted variance {variance_by_num_regions[i]}")
 
     # Because the total variance will always decrease as the number of regions increases, we apply some tricks
     # to decide whether increasing the number of regions provides enough of a decrease to be sensible. 
-    ideal_num_regions = 4
-    if thresholds_by_num_regions[3]/thresholds_by_num_regions[2] > 0.5:
+    if variance_by_num_regions[3]/variance_by_num_regions[2] > 0.5:
         # If using 3 regions does not cut down the variance by at least half
         # compared to using 2 regions, then just stuck with 2
         ideal_num_regions = 2
-    elif (thresholds_by_num_regions[3] - thresholds_by_num_regions[4]) / (thresholds_by_num_regions[2] - thresholds_by_num_regions[3]) < 0.33:
+        print("Using 3 regions instead of 2 does not decrease the variance by a large amount.")
+    elif (variance_by_num_regions[3] - variance_by_num_regions[4]) / (variance_by_num_regions[2] - variance_by_num_regions[3]) < 0.33:
         # If the decrease in variance going from 3 to 4 regions is less than a third
         # of the decrease in variance going from 2 to 3 regions, then just stick with 3.
         ideal_num_regions = 3
+        print("Using 4 regions instead of 3 does not decrease the variance by a large amount.")
+    else:
+        ideal_num_regions = 4
+
+    print(f"It seems like using {ideal_num_regions} regions and thresholds of {thresholds_by_num_regions[ideal_num_regions]} is the best way to segment the image")
 
     segmented_img = get_segmented_image(img, thresholds_by_num_regions[ideal_num_regions])
 
