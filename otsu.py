@@ -219,6 +219,7 @@ def main():
 
     # Because the total variance will always decrease as the number of regions increases, we apply some tricks
     # to decide whether increasing the number of regions provides enough of a decrease to be sensible. 
+    # This is based more on intuition than on science.
     if variance_by_num_regions[3]/variance_by_num_regions[2] > 0.5:
         # If using 3 regions does not cut down the variance by at least half
         # compared to using 2 regions, then just stuck with 2
