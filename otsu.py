@@ -85,6 +85,12 @@ def get_segmented_image(img, thresholds):
     return img2
 
 class OtsusSolver:
+    """
+    A class to implement Otsu's method to find the best thresholds
+    to segment a given image into 2, 3, or 4 regions.
+    Each instance of this class is initialized with a particular image,
+    and memoizes intermediate results for better performance.
+    """
     def __init__(self, img):
         self.img = img
         gray_values = [grayscale(rgb) for rgb in img.getdata()]
@@ -139,6 +145,12 @@ class OtsusSolver:
         return self.class_vars[g_min][g_max]
 
     def get_weighted_total_variance(self, thresholds):
+        """
+        Compute the sum of weighted variances when segmenting
+        the image using the provided thesholds.
+
+        thresholds: an array of 1 or more thresholds
+        """
         num_regions = len(thresholds) + 1
         thresholds = [-1] + thresholds + [255] # implicit upper and lower limits
 
@@ -150,6 +162,15 @@ class OtsusSolver:
         return total_var
 
     def get_best_thresholds(self):
+        """
+        Computes the optimal thresholds and total variance
+        for segmenting the image into 2, 3, or 4 regions.
+
+        Returns:
+        variance_by_num_regions, thresholds_by_num_regions
+        variance_by_num_regions (dict: int -> float): sum of weighted variances, keyed by number of regions
+        thresholds_by_num_regions (dict: int -> array[int]): ideal thresholds to use, keyed by number of regions
+        """
         variance_by_num_regions = {2: np.inf, 3: np.inf, 4: np.inf}
         thresholds_by_num_regions = {2: [], 3: [], 4: []}
 
@@ -186,27 +207,27 @@ def main():
     otsus = OtsusSolver(img)
     variance_by_num_regions, thresholds_by_num_regions = otsus.get_best_thresholds()
 
-    print(f"Two regions: {variance_by_num_regions[2]}, {thresholds_by_num_regions[2]}")
-    segmented = get_segmented_image(img, thresholds_by_num_regions[2])
-    segmented.show()
-    print(f"Three regions: {variance_by_num_regions[3]}, {thresholds_by_num_regions[3]}")
-    segmented = get_segmented_image(img, thresholds_by_num_regions[3])
-    segmented.show()
-    print(f"Four regions: {variance_by_num_regions[4]}, {thresholds_by_num_regions[4]}")
-    segmented = get_segmented_image(img, thresholds_by_num_regions[4])
-    segmented.show()
+    for i in range(2, 5):
+        print(f"{i} regions: best threshold(s)={thresholds_by_num_regions[i]}, with total weighted variance {variance_by_num_regions[i]}")
 
-    if variance_by_num_regions[2] <= variance_by_num_regions[3] and variance_by_num_regions[2] <= variance_by_num_regions[4]:
-        print(f"Two regions is best, with total weighted variance {variance_by_num_regions[2]} using thresholds {thresholds_by_num_regions[2]}")
-    elif variance_by_num_regions[3] <= variance_by_num_regions[4]:
-        print(f"Three regions is best, with total weighted variance {variance_by_num_regions[3]} using thresholds {thresholds_by_num_regions[3]}")
+    # Because the total variance will always decrease as the number of regions increases, we apply some tricks
+    # to decide whether increasing the number of regions provides enough of a decrease to be sensible. 
+    ideal_num_regions = 4
+    if thresholds_by_num_regions[3]/thresholds_by_num_regions[2] > 0.5:
+        # If using 3 regions does not cut down the variance by at least half
+        # compared to using 2 regions, then just stuck with 2
+        ideal_num_regions = 2
+    elif (thresholds_by_num_regions[3] - thresholds_by_num_regions[4]) / (thresholds_by_num_regions[2] - thresholds_by_num_regions[3]) < 0.33:
+        # If the decrease in variance going from 3 to 4 regions is less than a third
+        # of the decrease in variance going from 2 to 3 regions, then just stick with 3.
+        ideal_num_regions = 3
+
+    segmented_img = get_segmented_image(img, thresholds_by_num_regions[ideal_num_regions])
+
+    if args.dest is not None:
+        segmented_img.save(args.dest)
     else:
-        print(f"Four regions is best, with total weighted variance {variance_by_num_regions[4]} using thresholds {thresholds_by_num_regions[4]}")
-
-    # if args.dest is not None:
-    #     img.save(args.dest)
-    # else:
-    #     img.show()
+        segmented_img.show()
 
 if __name__ == "__main__":
     main()
