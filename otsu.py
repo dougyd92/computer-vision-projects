@@ -215,7 +215,8 @@ def main():
     variance_by_num_regions, thresholds_by_num_regions = otsus.get_best_thresholds()
 
     for i in range(2, 5):
-        print(f"{i} regions: best threshold={thresholds_by_num_regions[i]}, with total weighted variance {variance_by_num_regions[i]}")
+        print(f"""{i} regions: best threshold={thresholds_by_num_regions[i]}, 
+        with total weighted variance {variance_by_num_regions[i]}""")
 
     # Because the total variance will always decrease as the number of regions increases, we apply some tricks
     # to decide whether increasing the number of regions provides enough of a decrease to be sensible. 
@@ -233,7 +234,8 @@ def main():
     else:
         ideal_num_regions = 4
 
-    print(f"It seems like using {ideal_num_regions} regions and thresholds of {thresholds_by_num_regions[ideal_num_regions]} is the best way to segment the image")
+    print(f"""It seems like using {ideal_num_regions} regions and thresholds of {thresholds_by_num_regions[ideal_num_regions]} 
+    is the best way to segment the image""")
 
     segmented_img = get_segmented_image(img, thresholds_by_num_regions[ideal_num_regions])
 
